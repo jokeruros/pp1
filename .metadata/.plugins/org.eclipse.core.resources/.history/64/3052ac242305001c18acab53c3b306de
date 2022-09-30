@@ -1,0 +1,29 @@
+//Test 302
+
+program test302
+
+const int jedan = 1;
+
+int i,j;
+bool ibool;
+
+int niz[],niz1[];
+
+{
+	void main()
+	{
+		niz=new int[3];
+		niz1=new int[3];
+		
+		read(niz[0]);
+		read(niz[1]);
+		read(niz[2]);
+		read(niz1[0]);
+		read(niz1[1]);
+		read(niz1[2]);
+		i=niz"*"niz1;
+		
+		
+	}
+}
+

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.MulVector"/>
+    <fullyQualifiedTypeName name="java.lang.Object"/>
+    <fullyQualifiedTypeName name="java.util.List"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.VectorMulOperands"/>
+    <fullyQualifiedTypeName name="rs.etf.pp1.symboltable.concepts.Obj"/>
+    <fullyQualifiedTypeName name="org.graalvm.compiler.core.common.type.ArithmeticOpTable.Op"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.VectorElem"/>
+    <fullyQualifiedTypeName name="rs.etf.pp1.symboltable.concepts.Struct"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.ElemLBracket"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.ElemRBracket"/>
+    <fullyQualifiedTypeName name="com.sun.tools.classfile.Code_attribute"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.Assignop"/>
+    <fullyQualifiedTypeName name="rs.etf.pp1.mj.runtime.Code"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.ElemArray"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.ast.DesignAssignopExpr"/>
+    <fullyQualifiedTypeName name="java.util.ArrayList"/>
+    <fullyQualifiedTypeName name="java.io.FileWriter"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.CompilerError"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.CompilerError.CompilerErrorType"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.MyCompiler"/>
+    <fullyQualifiedTypeName name="java.util.Stack"/>
+    <fullyQualifiedTypeName name="rs.ac.bg.etf.pp1.CodeGenerator"/>
+</qualifiedTypeNameHistroy>

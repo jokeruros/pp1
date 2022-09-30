@@ -1,0 +1,1039 @@
+package rs.ac.bg.etf.pp1;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
+import org.apache.log4j.Logger;
+
+import com.sun.org.apache.xerces.internal.impl.xpath.regex.Match;
+import rs.ac.bg.etf.pp1.CounterVisitor.FormParamCounter;
+import rs.ac.bg.etf.pp1.CounterVisitor.VarCounter;
+import rs.ac.bg.etf.pp1.ast.AddOperation;
+import rs.ac.bg.etf.pp1.ast.AndCond;
+import rs.ac.bg.etf.pp1.ast.AndCondFacts;
+import rs.ac.bg.etf.pp1.ast.Assignop;
+import rs.ac.bg.etf.pp1.ast.BoolFactor;
+import rs.ac.bg.etf.pp1.ast.BreakStm;
+import rs.ac.bg.etf.pp1.ast.CallFuncNoParams;
+import rs.ac.bg.etf.pp1.ast.CallFuncNoParams1;
+import rs.ac.bg.etf.pp1.ast.CallFuncParams;
+import rs.ac.bg.etf.pp1.ast.CallFuncParams1;
+import rs.ac.bg.etf.pp1.ast.Case;
+import rs.ac.bg.etf.pp1.ast.CaseNum;
+import rs.ac.bg.etf.pp1.ast.CharFactor;
+import rs.ac.bg.etf.pp1.ast.Cond;
+import rs.ac.bg.etf.pp1.ast.ContinueStm;
+import rs.ac.bg.etf.pp1.ast.Default;
+import rs.ac.bg.etf.pp1.ast.DesigFactor;
+import rs.ac.bg.etf.pp1.ast.DesigMinusMinus;
+import rs.ac.bg.etf.pp1.ast.DesigPlusPlus;
+import rs.ac.bg.etf.pp1.ast.DesignAssignopExpr;
+import rs.ac.bg.etf.pp1.ast.Designator;
+import rs.ac.bg.etf.pp1.ast.DesignatorSt;
+import rs.ac.bg.etf.pp1.ast.DivOperation;
+import rs.ac.bg.etf.pp1.ast.Do;
+import rs.ac.bg.etf.pp1.ast.DoWhileStm;
+import rs.ac.bg.etf.pp1.ast.ElemArray;
+import rs.ac.bg.etf.pp1.ast.ElemClass;
+import rs.ac.bg.etf.pp1.ast.ElemLBracket;
+import rs.ac.bg.etf.pp1.ast.ElemRBracket;
+import rs.ac.bg.etf.pp1.ast.Else;
+import rs.ac.bg.etf.pp1.ast.EndOfSwitchCases;
+import rs.ac.bg.etf.pp1.ast.ExprCont1;
+import rs.ac.bg.etf.pp1.ast.ExprInParen;
+import rs.ac.bg.etf.pp1.ast.ExprNonTernMinus;
+import rs.ac.bg.etf.pp1.ast.FuncOrVarName;
+import rs.ac.bg.etf.pp1.ast.Greater;
+import rs.ac.bg.etf.pp1.ast.GreaterEqual;
+import rs.ac.bg.etf.pp1.ast.If;
+import rs.ac.bg.etf.pp1.ast.IfWithElseMatched;
+import rs.ac.bg.etf.pp1.ast.IfWithElseUnmatched;
+import rs.ac.bg.etf.pp1.ast.IfWithoutElse;
+import rs.ac.bg.etf.pp1.ast.IsEqual;
+import rs.ac.bg.etf.pp1.ast.JustReturn;
+import rs.ac.bg.etf.pp1.ast.LesEqual;
+import rs.ac.bg.etf.pp1.ast.Less;
+import rs.ac.bg.etf.pp1.ast.MatchStm;
+import rs.ac.bg.etf.pp1.ast.MethDeclNoRet;
+import rs.ac.bg.etf.pp1.ast.MethDeclRet;
+import rs.ac.bg.etf.pp1.ast.MethTypeName;
+import rs.ac.bg.etf.pp1.ast.MethVoidName;
+import rs.ac.bg.etf.pp1.ast.MinusOperation;
+import rs.ac.bg.etf.pp1.ast.ModOperation;
+import rs.ac.bg.etf.pp1.ast.MulOperation;
+import rs.ac.bg.etf.pp1.ast.MulVector;
+import rs.ac.bg.etf.pp1.ast.Mulop;
+import rs.ac.bg.etf.pp1.ast.NewTypeExpr;
+import rs.ac.bg.etf.pp1.ast.NotEqaul;
+import rs.ac.bg.etf.pp1.ast.NumFactor;
+import rs.ac.bg.etf.pp1.ast.OrCond;
+import rs.ac.bg.etf.pp1.ast.OrCondTerms;
+import rs.ac.bg.etf.pp1.ast.PrintWithParam;
+import rs.ac.bg.etf.pp1.ast.PrintWithoutParam;
+import rs.ac.bg.etf.pp1.ast.Read;
+import rs.ac.bg.etf.pp1.ast.RelopExprFacts;
+import rs.ac.bg.etf.pp1.ast.ReturnExpr;
+import rs.ac.bg.etf.pp1.ast.SingleCondFact;
+import rs.ac.bg.etf.pp1.ast.SingleCondTerm;
+import rs.ac.bg.etf.pp1.ast.SingleExprFact;
+import rs.ac.bg.etf.pp1.ast.SwitchEndExpr;
+import rs.ac.bg.etf.pp1.ast.SwitchExpr;
+import rs.ac.bg.etf.pp1.ast.SwitchLStartExpr;
+import rs.ac.bg.etf.pp1.ast.SwitchStm;
+import rs.ac.bg.etf.pp1.ast.SyntaxNode;
+import rs.ac.bg.etf.pp1.ast.Term;
+import rs.ac.bg.etf.pp1.ast.TermContMulop;
+import rs.ac.bg.etf.pp1.ast.UnmStm;
+import rs.ac.bg.etf.pp1.ast.VisitorAdaptor;
+import rs.ac.bg.etf.pp1.ast.While;
+import rs.ac.bg.etf.pp1.ast.Yield;
+import rs.etf.pp1.mj.runtime.Code;
+import rs.etf.pp1.symboltable.Tab;
+import rs.etf.pp1.symboltable.concepts.Obj;
+import rs.etf.pp1.symboltable.concepts.Struct;
+import sun.swing.BakedArrayList;
+
+public class CodeGenerator extends VisitorAdaptor {
+	int lastSwitchDeclPc;
+	private boolean doStm=false;
+	private int mainPc;
+	boolean newTypeExpr=false;
+	String currentOperation;
+	boolean andCondProcess=true;
+	boolean orCondProcces=true;
+	boolean lastCond;
+	boolean or=false;
+	List<Integer> backTrackingListAnd=new ArrayList<Integer>();
+	List<Integer> backTrackingListOr=new ArrayList<Integer>();
+	List<Integer> backTrackingList=new ArrayList<Integer>();
+	//List<BackTrackRecord>  records=new ArrayList<BackTrackRecord>();
+	List<Integer> recordsJmp=new ArrayList<Integer>();
+	Stack<List<Integer>> recordsJmpBreak=new Stack<List<Integer>>();
+	Stack<List<Integer>> recordsJmpContinue=new Stack<List<Integer>>();
+	Stack<List<BackTrackRecord>> rec=new Stack<List<BackTrackRecord>>();
+	Stack<List<Integer>> switchNumJump=new Stack<List<Integer>>();
+	Stack<List<Integer>> switchYieldJump=new Stack<List<Integer>>();
+	Stack<List<Integer>> switchNumCase=new Stack<List<Integer>>();
+	Stack<List<Integer>> switchExprStartEnd=new Stack<List<Integer>>();
+	Stack<Integer> doPc=new Stack<Integer>();
+	boolean newOne=true;
+	public int getMainPc() {
+		return mainPc;
+	}
+	
+	Logger log = Logger.getLogger(getClass());
+	public void report_info(String message, SyntaxNode info) {
+		StringBuilder msg = new StringBuilder(message); 
+		int line = (info == null) ? 0: info.getLine();
+		if (line != 0)
+			msg.append (" na liniji ").append(line);
+		log.info(msg.toString());
+	}
+	
+	
+	
+	
+	public void visit(DesignAssignopExpr expr) {
+			Obj obj=expr.getDesignator().obj;
+			
+			if(obj.getType().getKind()==Struct.Array) {
+				if(newTypeExpr) {newTypeExpr=false;Code.store(obj);return;}
+				//septembar
+				if(vector_dst!=null) 
+				{
+					vector_dst=null;
+					firstVector=null;
+					secondVector=null;
+					return;
+				} // vec su smestene vrednosti u vector
+				Struct struct=obj.getType().getElemType();
+				if(struct.getKind() == Struct.Char) Code.put(Code.bastore);
+		        else Code.put(Code.astore);
+				return;
+			}
+			
+				Code.store(obj);
+				
+			
+			
+		
+	}
+	
+
+	public void visit(Term term) {
+		if(term.getParent().getClass()==ExprNonTernMinus.class) {
+			Code.put(Code.neg);
+		}
+		
+	}
+	
+	public boolean pristupElem=false;
+	
+	public void visit(ElemLBracket el) {
+		pristupElem=true;		
+		
+	}
+
+	
+	//septembar
+	Obj firstVector=null;
+	Obj secondVector=null;
+	boolean isScalarOnStack=false;
+	
+	public void visit(DesigFactor factor) {
+		
+		
+		Obj obj=factor.getDesignator().obj;
+		if(obj.getKind()==Obj.Meth)return;
+		if(obj.getType().getKind()==Struct.Array && pristupElem) {
+			Struct typeOfElem=obj.getType().getElemType();
+			if(typeOfElem.getKind()==Struct.Char) {
+				Code.put(Code.baload);
+			}else {
+				
+				Code.put(Code.aload);	
+			}
+			
+		}
+		//septembar
+		
+		  if(obj.getType().getKind()==Struct.Array && !pristupElem)
+		  { 
+			if(firstVector==null)firstVector=obj;
+			else secondVector=obj;
+			Code.put(Code.pop);
+		  }	
+		  //nije sept
+		  pristupElem=false;
+			
+	}
+	
+	
+
+	public void visit(ElemArray el) {
+		if(el.getParent().getClass()==DesignAssignopExpr.class) {
+			vector_dst=null;
+		}
+	}
+	 
+	
+	//septembar
+		Obj vector_dst=null;
+		
+	public void visit(FuncOrVarName des) {
+		
+		pristupElem=false;
+		Obj obj = des.obj;
+		Struct struct = obj.getType();
+		
+		if (des.getParent().getClass()!=DesignAssignopExpr.class
+				&& des.getParent().getClass()!=DesigPlusPlus.class
+				&& des.getParent().getClass()!=DesigMinusMinus.class
+				&& des.getParent().getClass()!=CallFuncParams.class
+				&& des.getParent().getClass()!=CallFuncNoParams.class
+				&& obj.getKind()!=Obj.Meth) {
+
+			Code.load(des.obj);
+
+		}
+		
+		//septembar
+		if(des.getParent().getClass()==DesignAssignopExpr.class) {
+			if(obj.getType().getKind()==Struct.Array) {
+				vector_dst=obj;
+			}
+		}
+		
+		
+
+	}
+	
+	public void visit(ExprCont1 addop) {
+		switch(addop.getAddop().obj.getName()) {
+		case "add":
+			Code.put(Code.add);
+			break;
+		case "min":
+			Code.put(Code.sub);
+		break;
+		}
+	}
+	public void visit(TermContMulop mulop) {
+		//na steku je ovde vec factor1 i factor2,ovde mnozenje
+		switch(mulop.getMulop().obj.getName()) {
+		case "mul":
+		{
+			if(firstVector!=null && secondVector!=null){
+			 Code.load(firstVector);// loadO(firstVector);
+			  Code.put(Code.arraylength);
+			  int PcGoto=Code.pc;
+			  Code.loadConst(1);
+			  Code.put(Code.sub);
+			  Code.put(Code.dup);
+			  Code.loadConst(0);
+			  Code.putFalseJump(Code.ge,0);
+			  int fixPcJmp=Code.pc-2;
+			  Code.put(Code.dup);
+			  Code.load(firstVector);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.put(Code.aload);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.put(Code.dup);
+			  Code.load(secondVector);//loadO(secondVector);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.put(Code.aload);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.put(Code.dup_x2);
+			  Code.put(Code.pop);
+			  Code.put(Code.mul);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.putJump(PcGoto);
+			  Code.fixup(fixPcJmp);
+			  Code.put(Code.pop); // da se izbrise zadnja vrednost
+			  //sabiranje pomnozenih vrednosti
+			  Code.load(firstVector);//loadO(firstVector);
+			  Code.put(Code.arraylength);
+			  int addLoop=Code.pc;
+			  Code.loadConst(1);
+			  Code.put(Code.sub);
+			  Code.put(Code.dup);
+			  Code.loadConst(1);
+			  int addDoneJmp=Code.pc+1;
+			  Code.putFalseJump(Code.ge,0);
+			  Code.put(Code.dup_x2);
+			  Code.put(Code.pop);
+			  Code.put(Code.add);
+			  Code.put(Code.dup_x1);
+			  Code.put(Code.pop);
+			  Code.putJump(addLoop);
+			  Code.fixup(addDoneJmp);
+			  Code.put(Code.pop);
+			  if(isScalarOnStack) { Code.put(Code.mul);isScalarOnStack=false; }	  
+			  firstVector=null;
+			  secondVector=null;
+			}else 
+			if(firstVector!=null && vector_dst!=null){
+				//mnozenje tipa scalar * vector
+				if(firstVector!=null) {
+					Code.load(firstVector);
+					Code.put(Code.arraylength);
+					int pcGoto=Code.pc;
+		//loop:			
+					Code.loadConst(1);
+					Code.put(Code.sub);
+					Code.put(Code.dup);
+					Code.loadConst(0);
+					Code.putFalseJump(Code.ge,0);
+					int fixPcJmp=Code.pc-2;
+					Code.put(Code.dup2);
+					Code.put(Code.dup_x2);
+					Code.load(firstVector);
+					Code.put(Code.dup_x1);
+					Code.put(Code.pop);
+					Code.put(Code.aload);
+					Code.put(Code.mul);
+					Code.load(vector_dst);
+					Code.put(Code.dup_x2);
+					Code.put(Code.pop);
+					Code.put(Code.astore);
+					Code.putJump(pcGoto);
+		//endloop
+					Code.fixup(fixPcJmp);
+					Code.put(Code.pop); //da se izbrisu zadnje dve vrednosti na steku
+					Code.put(Code.pop);
+					
+					firstVector=vector_dst;
+					
+					
+					  
+					
+				}
+				//isScalarOnStack=true;
+			}
+			else if(firstVector!=null && vector_dst==null) {
+				isScalarOnStack=true;
+			}else {
+				Code.put(Code.mul);		
+				}
+			}
+			break;
+		case "div":
+			Code.put(Code.div);
+			break;
+		case "mod":
+			Code.put(Code.rem);
+			break;
+		}
+		
+	}
+	
+	public void visit(Read read) {
+		 Obj obj= read.getDesignator().obj;
+		 
+		 if(obj.getType().getKind()==Struct.Array) {
+			 Struct struct=obj.getType();
+			 if(struct.getElemType().getKind()!=Struct.Char) {
+				 Code.put(Code.read);
+				 Code.put(Code.astore);
+			 }else {
+				 Code.put(Code.bread);
+				 Code.put(Code.bastore);
+			 }
+		 }else
+		 {
+		if (obj.getType().getKind() != Struct.Char) {
+			Code.put(Code.read);
+		} else {
+			Code.put(Code.bread);
+		}
+			Code.store(obj);
+		 }
+	}
+	public void visit(PrintWithoutParam print) {
+		if(print.getExpr().struct.getKind()!=Struct.Char) {
+			Code.loadConst(5);
+			Code.put(Code.print);
+		}else {
+			Code.loadConst(6);
+			Code.put(Code.bprint);
+			
+		}
+	}
+	public void visit(PrintWithParam print) {
+		 int width=print.getN2();
+		if(print.getExpr().struct.getKind()!=Struct.Char) {
+			Code.loadConst(width);
+			Code.put(Code.print);
+		}else {
+			Code.loadConst(width);
+			Code.put(Code.bprint);
+		}
+	}
+	public void visit(NumFactor factor) {
+		Obj obj=Tab.insert(Obj.Con, "$",factor.struct);
+		obj.setAdr(factor.getN1());
+		Code.load(obj);
+		
+	}
+	
+	public void visit(CharFactor factor) {
+		Obj obj=Tab.insert(Obj.Con, "$", factor.struct);
+		obj.setAdr(factor.getC1().charAt(1));
+		Code.load(obj);
+	}
+
+	public void visit(BoolFactor factor) {
+		Obj obj=Tab.insert(Obj.Con, "$", factor.struct);
+		int val;
+		if(factor.getB1().equals("true"))val=1;else val=0;
+		obj.setAdr(val);
+		Code.load(obj);
+	}
+	public void visit(MethTypeName mtn) {
+		mtn.obj.setAdr(Code.pc);
+		//dohvatanje parametara i lokalnih promenljivih
+		SyntaxNode methodNode=mtn.getParent();
+		VarCounter varCnt=new VarCounter();
+		methodNode.traverseTopDown(varCnt);
+		FormParamCounter parmCnt=new FormParamCounter();
+		methodNode.traverseTopDown(parmCnt);
+		int arg=varCnt.getCount();
+		int par=parmCnt.getCount();
+		//Entry
+		Code.put(Code.enter);
+		Code.put(par);
+		Code.put(par+arg);
+	}
+	public void visit(MethVoidName mtn) {
+		if(mtn.getMethIdent().equalsIgnoreCase("main")) {
+			mainPc=Code.pc;
+		}
+		mtn.obj.setAdr(Code.pc);
+		//dohvatanje parametara i lokalnih promenljivih
+		SyntaxNode methodNode=mtn.getParent();
+		VarCounter varCnt=new VarCounter();
+		methodNode.traverseTopDown(varCnt);
+		FormParamCounter parmCnt=new FormParamCounter();
+		methodNode.traverseTopDown(parmCnt);
+		int arg=varCnt.getCount();
+		int par=parmCnt.getCount();
+		//Entry
+		Code.put(Code.enter);
+		Code.put(par);
+		Code.put(par+arg);
+	}
+	public void visit(MethDeclRet methodDecl) {
+		Code.put(Code.exit);
+		Code.put(Code.return_);
+	}
+	public void visit(MethDeclNoRet me) {
+		Code.put(Code.exit);
+		Code.put(Code.return_);
+	}
+	
+	public void visit(NewTypeExpr nte) {
+		newTypeExpr=true;
+		Code.put(Code.newarray);
+		if(nte.struct.getKind()!=Struct.Char) {
+			Code.loadConst(1);
+		}else {
+			Code.loadConst(0);
+		}
+			
+	}
+	
+	public void visit(DesigPlusPlus dsg) {
+		Obj des=dsg.getDesignator().obj;
+		Code.load(des);
+		Code.loadConst(1);
+		Code.put(Code.add);
+		Code.store(des);
+	}
+	
+	public void visit(DesigMinusMinus dsg) {
+		Obj des = dsg.getDesignator().obj;
+		Code.load(des);
+		Code.loadConst(1);
+		Code.put(Code.sub);
+		Code.store(des);
+	}
+	
+	
+	public void visit(ContinueStm stm) {
+		recordsJmpContinue.peek().add(Code.pc);
+		Code.putJump(0);
+	}
+	public void visit(While stm) {
+		List<Integer> fix=recordsJmpContinue.peek();
+		for(int i=0;i<fix.size();i++) {
+			int addrToJmp=Code.pc;
+			Code.pc=fix.get(i);
+			Code.putJump(addrToJmp);
+			Code.pc=addrToJmp;
+		}
+	}
+	public void visit(SingleExprFact fact) {
+		
+		//report_info("SingleExprFact",null);
+		Code.loadConst(0);
+		BackTrackRecord btr=new BackTrackRecord(Code.pc+1,"gr");
+		if (newOne) {rec.add(new ArrayList<BackTrackRecord>());newOne=false;}
+		List<BackTrackRecord>records=rec.peek();
+		records.add(btr);
+		backTrackingList.add(Code.pc+1);
+		Code.putFalseJump(Code.gt,0);
+		
+	}
+	
+	public void visit(SwitchLStartExpr s) {
+		switchNumJump.add(new ArrayList<Integer>());
+		 switchNumCase.add(new ArrayList<Integer>());
+		 switchExprStartEnd.add(new ArrayList<Integer>());
+		 recordsJmpBreak.add(new ArrayList<Integer>());
+		 switchYieldJump.add(new ArrayList<Integer>());
+		 switchExprStartEnd.peek().add(Code.pc);
+	}
+	public void visit(SwitchEndExpr s) {
+		 switchExprStartEnd.peek().add(Code.pc);
+		 //switch(a+b) (a+b)->skok u switchNumJump(0)
+		 switchNumJump.peek().add(Code.pc+1);
+		 Code.putJump(0);
+		 
+		
+	}
+	
+	public void visit(Yield yield ) {
+		switchYieldJump.peek().add(Code.pc);
+		Code.putJump(0);
+	}
+	
+	public void visit(Default defaultstm) {
+		switchNumJump.peek().add(Code.pc);
+	}
+	public void visit(SwitchStm stm) {
+		Code.putJump(0);
+		List<Integer> jumps=switchNumJump.peek();
+		List<Integer> caseNum=switchNumCase.peek();
+		List<Integer> startEnd=switchExprStartEnd.peek();
+		//podesi gde da se skoci iz switch-a
+		int swJump=jumps.remove(0);
+		Code.fixup(swJump);
+		//redjaj redom konstante i uporedjuj
+		for(int i=0;i<jumps.size()-1;i++) {
+			Code.loadConst(caseNum.get(i));
+			for(int j=startEnd.get(0);j<startEnd.get(1);j++) {
+				Code.put(Code.get(j));
+			}
+			Code.putFalseJump(Code.ne,jumps.get(i));
+			
+		}
+		
+		//jumps.size()-1 je default
+		int defaultLine=jumps.get(jumps.size()-1);
+		Code.putJump(defaultLine);
+		
+		
+		List<Integer> breakJmp=recordsJmpBreak.peek();
+		for(int i=0;i<breakJmp.size();i++) {
+			
+			int adrJump=Code.pc;
+			Code.pc=breakJmp.get(i);
+			Code.putJump(adrJump);
+			Code.pc=adrJump;
+			
+		}
+		//da bi se izaslo iz switcha (gde skace yield)
+		List<Integer> adrJumps=switchYieldJump.peek();
+		for(int i=0;i<adrJumps.size();i++) {
+			int adrJump=Code.pc;
+			Code.pc=adrJumps.get(i);
+			Code.putJump(adrJump);
+			Code.pc=adrJump;
+			
+		}
+		
+		
+		
+		recordsJmpBreak.pop();
+		switchExprStartEnd.pop();
+		switchNumCase.pop();
+		switchNumJump.pop();
+		switchYieldJump.pop();
+		
+	}
+	
+	public void visit(EndOfSwitchCases end) {
+			lastSwitchDeclPc=Code.pc;
+	}
+	public void visit(CaseNum num) {
+		switchNumCase.peek().add(num.getN1());
+		switchNumJump.peek().add(Code.pc);
+		
+	}
+	public void visit(UnmStm unmstm) {
+	//	report_info("UnmStm", null);
+	}
+	public void visit(MatchStm mtc) {
+	//	report_info("MatchedStm", null);
+		
+		
+		
+	}
+	
+	
+	public void visit(Cond cond) {
+		newOne=true;
+	//	report_info("Cond", null);
+		List<BackTrackRecord> records=rec.peek();
+		//podesavanje || da skoci na then granu
+		for(int i=0;i<records.size();i++) {
+			BackTrackRecord btr=records.get(i);
+			if(!btr.isAnd) {
+			int changeJmpcond=btr.adr-1;
+			int old_pc=Code.pc;
+			Code.pc=changeJmpcond;
+			
+			
+			 switch(btr.relop) {
+				case "less":
+					Code.putFalseJump(Code.gt,0);
+					break;
+				case "le":
+					Code.putFalseJump(Code.ge,0);
+					break;
+				case "ge":
+					Code.putFalseJump(Code.le,0);
+					break;
+				case "gr":
+					Code.putFalseJump(Code.lt,0);
+					break;
+				case "neq":
+					Code.putFalseJump(Code.eq,0);
+					break;
+				case "isequal":
+					Code.putFalseJump(Code.ne,0);
+					break;
+				
+				}
+			Code.pc=old_pc;
+			if(doStm) {
+				old_pc=Code.pc;
+				Code.pc=doPc.peek();
+				Code.fixup(btr.adr);
+				Code.pc=old_pc;
+			}else {
+				Code.fixup(btr.adr);	
+			}
+			
+			records.get(i).fixup=true;
+		}
+		}
+
+	}
+	
+	public void visit(Else els) {
+	//	report_info("Else", null);
+		recordsJmp.add(Code.pc);
+		Code.putJump(0);
+		checkLastCond();
+		List<BackTrackRecord> records=rec.peek();
+		//specijalan slucaj ( u1 && u2 && u3 && u4)
+		for(int i=0;i<records.size();i++) {
+			if(!records.get(i).fixup) {
+				BackTrackRecord btr=records.get(i);
+				int changeJmpcond=btr.adr-1;
+				int old_pc=Code.pc;
+				Code.pc=changeJmpcond;
+				Code.pc=old_pc;
+				Code.fixup(btr.adr);
+				btr.fixup=true;
+			}
+		}
+		rec.pop();
+		//rec.add(new ArrayList<BackTrackRecord>());
+		
+	}
+	
+	public void visit(IfWithoutElse ifcond) {
+	//	report_info("IfWithoutElse", null);
+		checkLastCond();
+		List<BackTrackRecord> records=rec.peek();
+		//specijalan slucaj ( u1 && u2 && u3 && u4)
+				for(int i=0;i<records.size();i++) {
+					if(!records.get(i).fixup) {
+						BackTrackRecord btr=records.get(i);
+						int changeJmpcond=btr.adr-1;
+						int old_pc=Code.pc;
+						Code.pc=changeJmpcond;
+						Code.pc=old_pc;
+						Code.fixup(btr.adr);
+						btr.fixup=true;
+					}
+				}
+		rec.pop();
+		//rec.add(new ArrayList<BackTrackRecord>());
+		setJmps();
+	}
+	public void visit(IfWithElseMatched e ) {
+		//report_info("IfWithElseMatched", null);
+		//checkLastCond();
+		setJmps();
+	}
+	public void visit(IfWithElseUnmatched e) {
+	//	report_info("IfWithElseUnmatched", null);
+		//checkLastCond();
+		setJmps();
+	}
+	
+	public void setJmpsDo() {
+		List<Integer>recordsJmp=recordsJmpBreak.peek();
+		for(int i=0;i<recordsJmp.size();i++) {
+			int addToJmp=Code.pc;
+			Code.pc=recordsJmp.get(i);
+			Code.putJump(addToJmp);
+			Code.pc=addToJmp;
+		}
+		
+	}
+	public void setJmps() {
+		for(int i=0;i<recordsJmp.size();i++) {
+			int addToJmp=Code.pc;
+			Code.pc=recordsJmp.get(i);
+			Code.putJump(addToJmp);
+			Code.pc=addToJmp;
+		}
+		recordsJmp=new ArrayList<Integer>();
+	}
+	
+	public void checkLastCond() {
+		List<BackTrackRecord> records=rec.peek();
+		if(records.size()>0) {
+			int last=records.size()-1;
+			BackTrackRecord btr=records.get(last);
+			int changeJmpcond=btr.adr-1;
+			int old_pc=Code.pc;
+			Code.pc=changeJmpcond;
+			
+			 switch(btr.relop) {
+				case "less":
+					Code.putFalseJump(Code.lt,0);
+					break;
+				case "le":
+					Code.putFalseJump(Code.le,0);
+					break;
+				case "ge":
+					Code.putFalseJump(Code.ge,0);
+					break;
+				case "gr":
+					Code.putFalseJump(Code.gt,0);
+					break;
+				case "neq":
+					Code.putFalseJump(Code.ne,0);
+					break;
+				case "isequal":
+					Code.putFalseJump(Code.eq,0);
+					break;
+				
+				}
+			Code.pc=old_pc;
+			
+				Code.fixup(btr.adr);	
+			
+			
+			btr.fixup=true;
+		}
+		
+	
+			
+	}
+	
+	public void visit(SingleCondFact s) {
+		// report_info("SingleCondFact", null);
+	}
+	public void visit(AndCondFacts a) {
+		//report_info("AndCondFacts", null);
+		List<BackTrackRecord> records=rec.peek();
+		int last=records.size()-1;
+		records.get(last).isAnd=true;
+		records.get(last-1).isAnd=true;
+	}
+	public void visit(OrCond Or) {
+		// report_info("OrCond", null);
+		 // x1 && x2 ||  -> min uslov da bi uopste pretrazivao ovo
+		List<BackTrackRecord> records=rec.peek();
+			int last=records.size()-1;
+			for(int i=last;i>=0;i--) {
+				if(records.get(i).isAnd) {
+					if(i==last)records.get(i).isAnd=false;
+					else {
+					Code.fixup(records.get(i).adr);
+					records.get(i).fixup=true;
+					}
+				}else break;
+			}	
+		 
+		
+		 
+	}
+	public void visit(AndCond and) {
+		or=false;
+	}
+	
+	public void visit(SingleCondTerm s) {
+	  //  report_info("SingleCondTerm", null);	
+	}
+	public void visit(OrCondTerms o) {
+	//	report_info("OrCondTerms", null);	
+	}
+	public void visit(RelopExprFacts exprs) {
+		// report_info("Relop", null);
+		String relop=exprs.getRelop().obj.getName();
+		BackTrackRecord btr=new BackTrackRecord(Code.pc+1, relop);
+		if(newOne) {{rec.add(new ArrayList<BackTrackRecord>());newOne=false;}}
+		List<BackTrackRecord> records=rec.peek();
+		records.add(btr);
+		
+		 switch(relop) {
+		case "less":
+			Code.putFalseJump(Code.lt,0);
+			break;
+		case "le":
+			Code.putFalseJump(Code.le,0);
+			break;
+		case "ge":
+			Code.putFalseJump(Code.ge,0);
+			break;
+		case "gr":
+			Code.putFalseJump(Code.gt,0);
+			break;
+		case "neq":
+			Code.putFalseJump(Code.ne,0);
+			break;
+		case "isequal":
+			Code.putFalseJump(Code.eq,0);
+			break;
+		
+		}
+		
+	}
+	
+	
+	//DO WHILE BREAK CONTINUE
+	
+	
+	public void visit(BreakStm breakStm) {
+		recordsJmpBreak.peek().add(Code.pc);
+		Code.putJump(0);
+	}
+	public void visit(DoWhileStm stm) {
+		setJmpsDo();
+		//zadnji uslov u do
+		List<BackTrackRecord> records=rec.peek();
+		if(records.size()>0) {
+			int last=records.size()-1;
+			BackTrackRecord btr=records.get(last);
+			int changeJmpcond=btr.adr-1;
+			int old_pc=Code.pc;
+			Code.pc=changeJmpcond;
+			
+			 switch(btr.relop) {
+				case "less":
+					Code.putFalseJump(Code.ge,0);
+					break;
+				case "le":
+					Code.putFalseJump(Code.gt,0);
+					break;
+				case "ge":
+					Code.putFalseJump(Code.lt,0);
+					break;
+				case "gr":
+					Code.putFalseJump(Code.le,0);
+					break;
+				case "neq":
+					Code.putFalseJump(Code.eq,0);
+					break;
+				case "isequal":
+					Code.putFalseJump(Code.ne,0);
+					break;
+				
+				}
+			 
+			 Code.pc=doPc.peek();
+			 Code.fixup(btr.adr);
+			 Code.pc=old_pc;
+			
+					
+			
+			
+			btr.fixup=true;
+		}
+	
+		
+		//specijalan slucaj ( u1 && u2 && u3 && u4)
+		for(int i=0;i<records.size();i++) {
+			if(!records.get(i).fixup) {
+				BackTrackRecord btr=records.get(i);
+				Code.fixup(btr.adr);
+				btr.fixup=true;
+			}
+		}
+		rec.pop();
+		doPc.pop();
+		recordsJmpBreak.pop();
+		recordsJmpContinue.pop();
+	}
+	
+	//FUNC CALL
+	public void visit(CallFuncNoParams callFunc) {
+		Obj funcCall=callFunc.getDesignator().obj;
+		int offset=funcCall.getAdr()-Code.pc;
+		Code.put(Code.call);
+		Code.put2(offset);
+		if(funcCall.getType()!=Tab.noType) {
+			Code.put(Code.pop);
+		}
+	}
+	public void visit(CallFuncParams callFunc) {
+		Obj funcCall=callFunc.getDesignator().obj;
+		int offset=funcCall.getAdr()-Code.pc;
+		if (callFunc.getDesignator().obj.getName().equals("chr") ||  callFunc.getDesignator().obj.getName().equals("ord"))return;
+			if (callFunc.getDesignator().obj.getName().equals("len")) {
+				Code.put(Code.arraylength);
+			}else {
+				Code.put(Code.call);
+				Code.put2(offset);
+				
+			}
+		
+		if(funcCall.getType()!=Tab.noType) {
+			Code.put(Code.pop);
+		}
+	}
+	public void visit(CallFuncNoParams1 callFunc) {
+		Obj funcCall=callFunc.getDesignator().obj;
+		int offset=funcCall.getAdr()-Code.pc;
+		Code.put(Code.call);
+		Code.put2(offset);
+	}
+	public void visit(CallFuncParams1 callFunc) {
+		Obj funcCall=callFunc.getDesignator().obj;
+		int offset=funcCall.getAdr()-Code.pc;
+		if (callFunc.getDesignator().obj.getName().equals("chr") ||  callFunc.getDesignator().obj.getName().equals("ord"))return;
+		if (callFunc.getDesignator().obj.getName().equals("len")) {
+			Code.put(Code.arraylength);
+		}else {
+		Code.put(Code.call);
+		Code.put2(offset);
+		}
+	}
+	public void visit(ReturnExpr ret) {
+		Code.put(Code.exit);
+		Code.put(Code.return_);
+	}
+	
+	public void visit(JustReturn ret) {
+		Code.put(Code.exit);
+		Code.put(Code.return_);
+	}
+	public void visit(Do dostm) {
+		recordsJmpBreak.add(new ArrayList<Integer>());
+		recordsJmpContinue.add(new ArrayList<Integer>());
+		doPc.push(Code.pc);
+		doStm=true;
+	}
+	public void visit(If iff) {
+		doStm=false;
+	}
+	public void visit(Less less) {
+		less.obj=new Obj(Obj.Var,"less",Tab.intType);
+	}
+	public void visit(LesEqual le) {
+		le.obj=new Obj(Obj.Var,"le",Tab.intType);
+	}
+	public void visit(GreaterEqual ge) {
+		ge.obj=new Obj(Obj.Var,"ge",Tab.intType);
+		
+	}
+	public void visit(Greater gr) {
+		gr.obj=new Obj(Obj.Var,"gr",Tab.intType);
+	}
+	public void visit(NotEqaul neq) {
+		neq.obj=new Obj(Obj.Var,"neq",Tab.intType);
+	}
+	public void visit(IsEqual eq) {
+		eq.obj=new Obj(Obj.Var,"isequal",Tab.intType);
+	}
+	public void visit(MulOperation mul) {
+		mul.obj=new Obj(Obj.Var,"mul",Tab.intType);
+	}
+	public void visit(DivOperation div) {
+		div.obj=new Obj(Obj.Var,"div",Tab.intType);
+	}
+	public void visit(ModOperation mod) {
+		mod.obj=new Obj(Obj.Var,"mod",Tab.intType);
+	}
+	public void visit(AddOperation add) {
+		add.obj=new Obj(Obj.Var,"add",Tab.intType);
+		//septembar
+		firstVector=null;
+		secondVector=null;
+	}
+	public void visit(MinusOperation min) {
+		min.obj=new Obj(Obj.Var,"min",Tab.intType);
+		//septembar
+		firstVector=null;
+		secondVector=null;
+	}
+	//septembar
+	public void visit(MulVector mulv) {
+		mulv.obj=new Obj(Obj.Var,"mulv",Tab.intType);
+		
+		
+	}
+}

@@ -1,0 +1,13 @@
+package rs.ac.bg.etf.pp1.test;
+
+import java.util.List;
+
+public class MyCompiler implements Compiler {
+
+	@Override
+	public List<CompilerError> compile(String sourceFilePath, String outputFilePath) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}

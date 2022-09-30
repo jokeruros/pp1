@@ -1,0 +1,2 @@
+eclipse.preferences.version=1
+prefWatchExpressions=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\r\n<watchExpressions>\r\n    <expression enabled\="true" text\="listOfVectorOperands"/>\r\n    <expression enabled\="true" text\="listOfVectorOperands"/>\r\n    <expression enabled\="true" text\="obj.getType().getKind()\=\=Struct.Array"/>\r\n    <expression enabled\="true" text\="isElem"/>\r\n    <expression enabled\="true" text\="MyCompiler.errors"/>\r\n    <expression enabled\="true" text\="pristupElem"/>\r\n</watchExpressions>\r\n
